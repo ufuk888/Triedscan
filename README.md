@@ -81,10 +81,8 @@ go mod tidy
 
 # 4. Uygulamayı başlatın
 go run main.go
-
----
-
-## 📖 Kullanım Kılavuzu
+    
+ 📖 Kullanım Kılavuzu
 
     Target: Taramak istediğiniz IP bloğunu (örn: 192.168.1.0/24) girin.
 
