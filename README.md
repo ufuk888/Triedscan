@@ -70,7 +70,7 @@ Aşağıdaki adımları terminalinizde sırasıyla çalıştırarak uygulamayı 
 
 ```bash
 # 1. Depoyu klonlayın ve içine girin
-git clone [https://github.com/ufuk888/Triedscan.git](https://github.com/ufuk888/Triedscan.git)
+git clone https://github.com/ufuk888/Triedscan.git
 cd Triedscan
 
 # 2. API Anahtarını ayarlayın (Zorunlu - Güvenli giriş için gereklidir)
