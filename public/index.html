@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TriedScan</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Oxanium:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #080c10;
+  --bg2:     #0d1318;
+  --bg3:     #111b24;
+  --surface: #16222e;
+  --border:  #1d2e3f;
+  --border2: #243a50;
+  --accent:  #00d4ff;
+  --green:   #00e87a;
+  --warn:    #ffaa00;
+  --danger:  #ff4d4d;
+  --muted:   #3d5a72;
+  --text:    #ccdde8;
+  --text2:   #6e92aa;
+  --text3:   #3d5a72;
+  --mono:    'JetBrains Mono', monospace;
+  --disp:    'Oxanium', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; background: var(--bg); }
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ── API Key modal ── */
+#auth-modal {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(8,12,16,.92);
+  display: flex; align-items: center; justify-content: center;
+}
+#auth-box {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 36px 40px; width: 400px;
+}
+#auth-box h2 { font-family: var(--disp); color: var(--accent); font-size: 20px; margin-bottom: 6px; }
+#auth-box p  { color: var(--text2); font-size: 12px; margin-bottom: 24px; line-height: 1.6; }
+#auth-key {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text); font-family: var(--mono); font-size: 14px;
+  padding: 12px 14px; border-radius: 4px; outline: none; margin-bottom: 12px;
+}
+#auth-key:focus { border-color: var(--accent); }
+#auth-err { color: var(--danger); font-size: 12px; min-height: 18px; margin-bottom: 10px; }
+.btn-auth {
+  width: 100%; padding: 13px; background: var(--accent); color: var(--bg);
+  border: none; border-radius: 4px; font-family: var(--mono);
+  font-size: 13px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; cursor: pointer;
+}
+.btn-auth:hover { background: #22eeff; }
+
+#hdr {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 28px; height: 58px; gap: 20px;
+}
+.logo { font-family: var(--disp); font-size: 22px; font-weight: 800; color: var(--accent); letter-spacing: 3px; }
+#badge {
+  font-size: 10px; font-weight: 600; letter-spacing: 2px;
+  padding: 4px 14px; border-radius: 3px; border: 1px solid var(--border2);
+  color: var(--text2); background: var(--bg3); text-transform: uppercase;
+}
+#badge.running { color: var(--green); border-color: var(--green); background: rgba(0,232,122,.06); animation: blink 2s ease-in-out infinite; }
+#badge.done    { color: var(--accent); border-color: var(--accent); background: rgba(0,212,255,.06); }
+#badge.error   { color: var(--danger); border-color: var(--danger); background: rgba(255,77,77,.06); }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.5} }
+
+#timer { font-family: var(--disp); font-size: 26px; font-weight: 700; color: var(--accent); letter-spacing: 2px; font-variant-numeric: tabular-nums; margin-left: auto; }
+
+#ctrl { padding: 24px 28px 0; display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start; }
+.ctrl-left { display: flex; flex-direction: column; gap: 16px; }
+.ctrl-right { display: flex; flex-direction: column; gap: 12px; }
+
+.field { display: flex; flex-direction: column; gap: 7px; }
+.lbl { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text2); }
+
+input[type=text], input[type=number] {
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text); font-family: var(--mono); font-size: 15px;
+  padding: 11px 14px; border-radius: 4px; outline: none; transition: border-color .2s; width: 100%;
+}
+input:focus { border-color: var(--accent); }
+input::placeholder { color: var(--text3); }
+
+.row2 { display: flex; gap: 12px; }
+.row2 .field { flex: 1; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip {
+  padding: 6px 13px; border-radius: 3px; font-size: 12px; cursor: pointer;
+  border: 1px solid var(--border2); color: var(--text2); transition: all .15s;
+  user-select: none; font-family: var(--mono);
+}
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,.08); }
+.chip.heavy { border-color: rgba(255,170,0,.4); color: var(--warn); }
+.chip.heavy.active { background: rgba(255,170,0,.08); }
+
+.btn-launch {
+  padding: 14px; border: none; border-radius: 4px;
+  background: var(--accent); color: var(--bg); font-family: var(--mono);
+  font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; transition: all .15s; width: 100%;
+}
+.btn-launch:hover { background: #22eeff; }
+.btn-launch:disabled { background: var(--surface); color: var(--muted); cursor: not-allowed; }
+
+.btn-abort {
+  padding: 11px; border: 1px solid var(--danger); border-radius: 4px;
+  background: transparent; color: var(--danger); font-family: var(--mono);
+  font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; transition: all .15s; width: 100%;
+}
+.btn-abort:hover { background: rgba(255,77,77,.1); }
+.btn-abort:disabled { opacity: .3; cursor: not-allowed; }
+
+#prog-wrap { padding: 22px 28px 0; }
+#prog-info { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-size: 12px; color: var(--text2); }
+#prog-pct { color: var(--accent); font-weight: 800; font-size: 22px; font-family: var(--disp); }
+#prog-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+#prog-fill { height: 100%; background: linear-gradient(90deg,#0090b8,var(--accent)); border-radius: 2px; width: 0%; transition: width .6s ease; }
+
+.sec-head {
+  padding: 30px 28px 16px; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--accent); display: flex; align-items: center; gap: 12px;
+}
+.sec-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+#workers-grid { padding: 0 28px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+
+.wcard {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 18px 20px; cursor: pointer; transition: border-color .2s, background .2s;
+  position: relative; overflow: hidden;
+}
+.wcard:hover { border-color: var(--border2); background: var(--bg3); }
+.wcard.sel { border-color: var(--accent); background: var(--bg3); }
+.wcard::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--border); }
+.wcard.s-running::before { background: var(--green); animation: blink 1.4s ease-in-out infinite; }
+.wcard.s-done::before    { background: var(--accent); }
+.wcard.s-error::before   { background: var(--danger); }
+
+.wcard-top { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.wnum { font-family: var(--disp); font-size: 24px; font-weight: 700; color: var(--text2); line-height: 1; }
+.wcard.s-running .wnum { color: var(--green); }
+.wcard.s-done    .wnum { color: var(--accent); }
+.wcard.s-error   .wnum { color: var(--danger); }
+.wstatus { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); }
+.wcard.s-running .wstatus { color: var(--green); }
+.wcard.s-done    .wstatus { color: var(--accent); }
+.wcard.s-error   .wstatus { color: var(--danger); }
+.wrange { font-size: 13px; color: var(--text2); word-break: break-all; line-height: 1.5; }
+.wtime  { font-size: 11px; color: var(--text3); margin-top: 6px; }
+
+#log-panel { margin: 18px 28px 0; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; display: none; }
+#log-panel.open { display: block; }
+#log-hdr { padding: 13px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--bg3); }
+#log-title  { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+#log-worker { font-size: 14px; color: var(--green); font-weight: 600; }
+#log-range  { font-size: 13px; color: var(--text2); }
+.log-as { margin-left: auto; font-size: 10px; color: var(--text3); cursor: pointer; padding: 3px 10px; border: 1px solid var(--border2); border-radius: 2px; }
+.log-as.on { color: var(--green); border-color: var(--green); }
+#log-body { height: 360px; overflow-y: auto; padding: 16px 22px; font-size: 13px; line-height: 1.8; color: var(--text2); }
+#log-body::-webkit-scrollbar { width: 5px; }
+#log-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.ll-open { color: var(--green); }
+.ll-err  { color: var(--danger); }
+.ll-warn { color: var(--warn); }
+
+.divider { margin: 40px 28px 0; border: none; border-top: 1px solid var(--border); }
+
+#results-section { padding: 0 28px 80px; }
+#res-stats { display: flex; gap: 36px; margin-bottom: 28px; flex-wrap: wrap; }
+.stat { display: flex; flex-direction: column; gap: 4px; }
+.stat-n { font-family: var(--disp); font-size: 36px; font-weight: 700; color: var(--accent); line-height: 1; }
+.stat-l { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); }
+
+#host-list { display: flex; flex-direction: column; gap: 10px; }
+.host-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.host-hdr { padding: 16px 22px; display: flex; align-items: center; gap: 18px; cursor: pointer; transition: background .15s; }
+.host-hdr:hover { background: var(--bg3); }
+.host-ip { font-size: 17px; font-weight: 600; color: var(--text); min-width: 150px; }
+.host-hostname { font-size: 14px; color: var(--text2); flex: 1; }
+.host-os { font-size: 12px; color: var(--text3); }
+.host-up   { font-size: 11px; padding: 4px 11px; border-radius: 2px; background: rgba(0,232,122,.08); border: 1px solid rgba(0,232,122,.3); color: var(--green); }
+.host-down { font-size: 11px; padding: 4px 11px; border-radius: 2px; background: transparent; border: 1px solid var(--border2); color: var(--text3); }
+.host-ports-wrap { display: none; padding: 0 22px 18px; border-top: 1px solid var(--border); }
+.host-ports-wrap.open { display: block; }
+.ports-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+.ports-table th { text-align: left; padding: 7px 14px; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); }
+.ports-table td { padding: 9px 14px; color: var(--text2); border-bottom: 1px solid rgba(29,46,63,.5); }
+.ports-table tr:last-child td { border-bottom: none; }
+.popen { color: var(--green); font-weight: 600; }
+.pnum  { color: var(--accent); font-weight: 600; }
+
+#xml-out {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 4px;
+  padding: 20px 22px; font-size: 12px; line-height: 1.7; color: var(--green);
+  overflow-x: auto; white-space: pre; max-height: 480px; overflow-y: auto; display: none;
+}
+#xml-out::-webkit-scrollbar { width: 5px; height: 5px; }
+#xml-out::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.res-tabs { display: flex; margin-bottom: 20px; }
+.rtab { padding: 9px 22px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; border: 1px solid var(--border); color: var(--text3); background: var(--bg2); }
+.rtab:first-child { border-radius: 4px 0 0 4px; }
+.rtab:last-child  { border-radius: 0 4px 4px 0; border-left: none; }
+.rtab.active      { background: var(--bg3); color: var(--accent); border-color: var(--accent); }
+
+#save-prompt { margin-top: 28px; padding: 22px 24px; background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; display: none; }
+#save-prompt.open { display: block; }
+.save-q  { font-size: 14px; color: var(--text2); margin-bottom: 14px; }
+.save-row { display: flex; gap: 10px; align-items: center; }
+#save-fn { flex: 1; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); font-family: var(--mono); font-size: 13px; padding: 10px 13px; border-radius: 4px; outline: none; }
+#save-fn:focus { border-color: var(--accent); }
+.btn-save { padding: 10px 22px; background: var(--accent); color: var(--bg); border: none; border-radius: 4px; font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 1.5px; cursor: pointer; text-transform: uppercase; }
+.btn-save:hover { background: #22eeff; }
+.btn-skip { padding: 10px 18px; background: transparent; color: var(--text3); border: 1px solid var(--border2); border-radius: 4px; font-family: var(--mono); font-size: 12px; cursor: pointer; }
+.btn-skip:hover { color: var(--text2); }
+
+.engine-btn { padding: 8px 18px; border-radius: 3px; font-size: 12px; font-family: var(--mono); font-weight: 600; letter-spacing: 1px; cursor: pointer; border: 1px solid var(--border2); color: var(--text2); background: var(--bg3); transition: all .15s; }
+.engine-btn:hover { border-color: var(--accent); color: var(--accent); }
+.engine-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,.08); }
+.engine-btn#btn-rustscan.active { border-color: var(--warn); color: var(--warn); background: rgba(255,170,0,.08); }
+
+.empty { padding: 40px; text-align: center; color: var(--text3); font-size: 13px; letter-spacing: 1px; }
+.val-err { color: var(--danger); font-size: 11px; margin-top: 4px; min-height: 16px; }
+</style>
+</head>
+<body>
+
+<!-- API Key Modal -->
+<div id="auth-modal">
+  <div id="auth-box">
+    <h2>⬡ TriedScan</h2>
+    <p>Devam etmek için API anahtarınızı girin.<br>Anahtar oturumda saklanır, disk'e yazılmaz.</p>
+    <input type="password" id="auth-key" placeholder="API Anahtarı" autocomplete="off">
+    <div id="auth-err"></div>
+    <button class="btn-auth" onclick="submitAuth()">Giriş</button>
+  </div>
+</div>
+
+<header id="hdr">
+  <div class="logo">⬡ TriedScan</div>
+  <div id="badge">IDLE</div>
+  <div id="timer">00:00:00</div>
+</header>
+
+<div id="ctrl">
+  <div class="ctrl-left">
+    <div class="field">
+      <div class="lbl">Target — IP / CIDR / Range</div>
+      <input type="text" id="inp-target" placeholder="192.168.1.0/24   ·   10.0.0.1-100   ·   172.16.0.1">
+      <div class="val-err" id="err-target"></div>
+    </div>
+    <div class="field">
+      <div class="lbl">Nmap Arguments</div>
+      <input type="text" id="inp-args" placeholder="-sV -T4">
+      <div class="val-err" id="err-args"></div>
+      <div class="chips" style="margin-top:9px">
+        <span class="chip" data-arg="-sS">-sS SYN</span>
+        <span class="chip" data-arg="-sV">-sV Version</span>
+        <span class="chip heavy" data-arg="-sC">-sC Scripts</span>
+        <span class="chip heavy" data-arg="-A">-A Aggressive</span>
+        <span class="chip" data-arg="-T4">-T4 Fast</span>
+        <span class="chip" data-arg="-T2">-T2 Sneaky</span>
+        <span class="chip heavy" data-arg="-p-">-p- All Ports</span>
+        <span class="chip heavy" data-arg="-O">-O OS Detect</span>
+        <span class="chip" data-arg="-Pn">-Pn No Ping</span>
+        <span class="chip" data-arg="--open">--open</span>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <div class="lbl">Workers</div>
+        <input type="number" id="inp-workers" placeholder="Auto" min="1" max="64">
+        <div class="val-err" id="err-workers"></div>
+      </div>
+      <div class="field">
+        <div class="lbl">Extra Flags</div>
+        <input type="text" id="inp-extra" placeholder="--script vuln">
+        <div class="val-err" id="err-extra"></div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lbl">Scanner Engine</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:2px">
+        <button id="btn-nmap" class="engine-btn active" onclick="setEngine('nmap')">⬡ Nmap</button>
+        <button id="btn-rustscan" class="engine-btn" onclick="setEngine('rustscan')">⚡ RustScan</button>
+        <span id="engine-info" style="font-size:11px;color:var(--text3);margin-left:6px">Per-IP workers · unlimited parallel</span>
+      </div>
+    </div>
+  </div>
+  <div class="ctrl-right">
+    <button class="btn-launch" id="btn-start" onclick="startScan()">▶  Launch Scan</button>
+    <button class="btn-abort" id="btn-abort" onclick="stopScan()" disabled>■  Abort</button>
+  </div>
+</div>
+
+<div id="prog-wrap">
+  <div id="prog-info"><span id="prog-label">—</span><span id="prog-pct">0%</span></div>
+  <div id="prog-track"><div id="prog-fill"></div></div>
+</div>
+
+<div class="sec-head">Subprocess Workers — click to inspect</div>
+<div id="workers-grid">
+  <div class="empty" style="grid-column:1/-1">No workers — launch a scan to begin</div>
+</div>
+
+<div id="log-panel">
+  <div id="log-hdr">
+    <div id="log-title">Live Output</div>
+    <div id="log-worker">—</div>
+    <div id="log-range"></div>
+    <div class="log-as on" id="log-as" onclick="toggleAS()">AutoScroll</div>
+  </div>
+  <div id="log-body"><div class="empty">Select a worker above</div></div>
+</div>
+
+<hr class="divider">
+
+<div class="sec-head" style="color:var(--warn)">Merged Results</div>
+<div id="results-section">
+  <div id="res-stats">
+    <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Total IPs</div></div>
+    <div class="stat"><div class="stat-n" id="s-up" style="color:var(--green)">—</div><div class="stat-l">Hosts Up</div></div>
+    <div class="stat"><div class="stat-n" id="s-down" style="color:var(--text3)">—</div><div class="stat-l">Hosts Down</div></div>
+    <div class="stat"><div class="stat-n" id="s-ports" style="color:var(--warn)">—</div><div class="stat-l">Open Ports</div></div>
+    <div class="stat"><div class="stat-n" id="s-elapsed" style="color:var(--text2)">—</div><div class="stat-l">Duration</div></div>
+  </div>
+  <div class="res-tabs">
+    <div class="rtab active" onclick="switchTab('parsed')">Parsed View</div>
+    <div class="rtab" onclick="switchTab('xml')">Raw XML</div>
+  </div>
+  <div id="host-list"><div class="empty">Results will appear here after the scan completes.</div></div>
+  <pre id="xml-out"></pre>
+  <div id="save-prompt">
+    <div class="save-q">Save merged XML to disk?</div>
+    <div class="save-row">
+      <input type="text" id="save-fn" value="triedscan_result.xml" readonly>
+      <button class="btn-save" onclick="doSave()">Save</button>
+      <button class="btn-skip" onclick="skipSave()">Skip</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Auth ──────────────────────────────────────────────────────────────────────
+let SESSION_KEY = sessionStorage.getItem('ts_key') || '';
+
+function submitAuth() {
+  const val = document.getElementById('auth-key').value.trim();
+  if (!val) { document.getElementById('auth-err').textContent = 'Anahtar boş olamaz'; return; }
+  SESSION_KEY = val;
+  sessionStorage.setItem('ts_key', val);
+  document.getElementById('auth-modal').style.display = 'none';
+  initSSE();
+}
+
+// Eğer anahtar zaten kayıtlıysa modal'ı kapat
+if (SESSION_KEY) {
+  document.getElementById('auth-modal').style.display = 'none';
+  document.addEventListener('DOMContentLoaded', initSSE);
+}
+
+document.getElementById('auth-key').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitAuth();
+});
+
+function apiHeaders(extra) {
+  return Object.assign({ 'X-API-Key': SESSION_KEY }, extra);
+}
+
+// ── Validasyon ────────────────────────────────────────────────────────────────
+const TARGET_RE = /^[0-9./\-, ]+$/;
+// İzin verilen argümanlar (backend ile senkron)
+const ALLOWED_ARGS = new Set([
+  '-sS','-sV','-sC','-A',
+  '-T1','-T2','-T3','-T4','-T5',
+  '-p-','-O','-Pn','--open',
+  '--script','vuln','default','safe'
+]);
+const DANGEROUS_RE = /[;&|`$(){}<>\\'"\n\r]/;
+
+function validateTarget(v) {
+  if (!v) return 'Hedef boş olamaz';
+  if (v.length > 512) return 'Hedef çok uzun';
+  if (!TARGET_RE.test(v)) return 'Geçersiz karakter: sadece IP/CIDR/aralık notasyonu';
+  return '';
+}
+
+function validateArgs(v) {
+  if (!v) return '';
+  if (DANGEROUS_RE.test(v)) return 'Geçersiz karakter tespit edildi';
+  const fields = v.trim().split(/\s+/);
+  for (const f of fields) {
+    if (f.startsWith('--script=')) {
+      const s = f.replace('--script=','');
+      if (!/^[a-zA-Z0-9_,\-]+$/.test(s)) return `Geçersiz script adı: ${s}`;
+      continue;
+    }
+    if (/^-p/.test(f)) {
+      if (!/^-p[0-9,\-]*$/.test(f)) return `Geçersiz port belirtimi: ${f}`;
+      continue;
+    }
+    if (!ALLOWED_ARGS.has(f)) return `İzin verilmeyen argüman: ${f}`;
+  }
+  return '';
+}
+
+function validateWorkers(v) {
+  if (!v) return '';
+  const n = parseInt(v);
+  if (isNaN(n) || n < 1 || n > 64) return '1–64 arasında olmalı';
+  return '';
+}
+
+function showErr(id, msg) { document.getElementById(id).textContent = msg; }
+function clearErrs() { ['err-target','err-args','err-workers','err-extra'].forEach(id => showErr(id,'')); }
+
+// ── SSE ───────────────────────────────────────────────────────────────────────
+let es, scanRunning = false, selWorker = null, autoScroll = true;
+let timerIval = null, startTime = null;
+let workers = [], workerLogs = {}, mergedXML = '';
+let scanEngine = 'nmap';
+
+function initSSE() {
+  es = new EventSource('/events');
+  es.onmessage = e => {
+    let msg; try { msg = JSON.parse(e.data); } catch { return; }
+    if (msg.running !== undefined) { applyState(msg); return; }
+    const { event, data } = msg;
+    if (event === 'scan:start')    onStart(data);
+    if (event === 'scan:done')     onDone(data);
+    if (event === 'scan:stopped')  onStopped();
+    if (event === 'scan:merged')   onMerged(data);
+    if (event === 'workers:init')  { workers = data || []; workerLogs = {}; renderGrid(); updateProg(); }
+    if (event === 'worker:update') updateWorker(data);
+    if (event === 'worker:log')    appendLog(data.id, data.line);
+  };
+  es.onerror = () => {
+    document.getElementById('auth-err').textContent = 'Bağlantı hatası — API anahtarı yanlış olabilir';
+    sessionStorage.removeItem('ts_key');
+    document.getElementById('auth-modal').style.display = 'flex';
+  };
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+function setEngine(e) {
+  scanEngine = e;
+  document.getElementById('btn-nmap').classList.toggle('active', e==='nmap');
+  document.getElementById('btn-rustscan').classList.toggle('active', e==='rustscan');
+  const info = document.getElementById('engine-info');
+  info.textContent = e==='nmap' ? 'Per-IP workers · unlimited parallel' : 'RustScan → semaphore-limited workers';
+  info.style.color = e==='nmap' ? 'var(--text3)' : 'var(--warn)';
+}
+
+function applyState(s) {
+  scanRunning = s.running;
+  workers = s.workers || [];
+  workerLogs = {};
+  workers.forEach(w => { workerLogs[w.id] = w.log || []; });
+  renderGrid(); updateProg();
+  setBadge(s.running ? 'running' : 'idle');
+  if (s.running) { startTime = new Date(s.startTime); startTimer(); }
+  if (s.config) {
+    g('inp-target').value  = s.config.target  || '';
+    g('inp-args').value    = s.config.nmapArgs || '';
+    g('inp-workers').value = s.config.workerCount || '';
+  }
+  setButtons(s.running);
+}
+
+function onStart()    { scanRunning=true; startTime=new Date(); startTimer(); setBadge('running'); setButtons(true); }
+function onDone(d)    { scanRunning=false; stopTimer(); setBadge('done'); setButtons(false); if(d?.elapsed) g('s-elapsed').textContent=fmtDur(d.elapsed); setTimeout(()=>g('results-section').scrollIntoView({behavior:'smooth'}),600); }
+function onStopped()  { scanRunning=false; stopTimer(); setBadge('idle'); setButtons(false); }
+function onMerged(d)  { g('save-prompt').classList.add('open'); fetchXML(); }
+
+// ── Worker grid ───────────────────────────────────────────────────────────────
+function renderGrid() {
+  const gr = g('workers-grid');
+  if (!workers.length) { gr.innerHTML='<div class="empty" style="grid-column:1/-1">No workers — launch a scan to begin</div>'; return; }
+  gr.innerHTML = workers.map(w=>`
+    <div class="wcard s-${w.status} ${selWorker===w.id?'sel':''}" id="wc-${w.id}" onclick="selW(${w.id})">
+      <div class="wcard-top"><div class="wnum">#${String(w.id).padStart(2,'0')}</div><div class="wstatus">${w.status.toUpperCase()}</div></div>
+      <div class="wrange">${escHtml(w.ipRange)}</div>
+      <div class="wtime">${workerTime(w)}</div>
+    </div>`).join('');
+}
+
+function workerTime(w) {
+  if (!w.startTime||w.startTime==='0001-01-01T00:00:00Z') return '';
+  if (w.status==='done'||w.status==='error') return fmtDur((new Date(w.endTime)-new Date(w.startTime))/1000);
+  return 'Running…';
+}
+
+function updateWorker(w) {
+  const i=workers.findIndex(x=>x.id===w.id);
+  if(i>=0)workers[i]={...workers[i],...w};else workers.push(w);
+  const card=g('wc-'+w.id);
+  if(card){card.className=`wcard s-${w.status} ${selWorker===w.id?'sel':''}`;card.querySelector('.wstatus').textContent=w.status.toUpperCase();card.querySelector('.wtime').textContent=workerTime(workers.find(x=>x.id===w.id));}
+  updateProg();
+}
+
+function selW(id) {
+  selWorker=id;
+  document.querySelectorAll('.wcard').forEach(c=>c.classList.remove('sel'));
+  const card=g('wc-'+id);if(card)card.classList.add('sel');
+  const w=workers.find(x=>x.id===id);
+  g('log-worker').textContent=`Worker #${String(id).padStart(2,'0')}`;
+  g('log-range').textContent=w?escHtml(w.ipRange):'';
+  const lines=workerLogs[id]||[];
+  const body=g('log-body');
+  body.innerHTML=lines.length?lines.map(cl).join('\n'):'<div class="empty">No output yet</div>';
+  if(autoScroll)body.scrollTop=body.scrollHeight;
+  g('log-panel').classList.add('open');
+}
+
+function appendLog(id,line){
+  if(!workerLogs[id])workerLogs[id]=[];
+  workerLogs[id].push(line);
+  if(workerLogs[id].length>2000)workerLogs[id]=workerLogs[id].slice(-2000);
+  if(selWorker===id){
+    const body=g('log-body');
+    if(body.querySelector('.empty'))body.innerHTML='';
+    const d=document.createElement('div');d.innerHTML=cl(line);body.appendChild(d);
+    if(autoScroll)body.scrollTop=body.scrollHeight;
+  }
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function cl(line){
+  const e=escHtml(line);
+  if(/open|discovered|up\b/i.test(line)) return `<span class="ll-open">${e}</span>`;
+  if(/error|fail|refused|denied/i.test(line)) return `<span class="ll-err">${e}</span>`;
+  if(/warn|skip|filter/i.test(line)) return `<span class="ll-warn">${e}</span>`;
+  return e;
+}
+
+function toggleAS(){ autoScroll=!autoScroll; const b=g('log-as');b.textContent=autoScroll?'AutoScroll':'Paused';b.className='log-as '+(autoScroll?'on':''); }
+
+function updateProg(){
+  const total=workers.length;if(!total)return;
+  const done=workers.filter(w=>w.status==='done').length;
+  const err=workers.filter(w=>w.status==='error').length;
+  const pct=Math.round((done+err)/total*100);
+  g('prog-fill').style.width=pct+'%';g('prog-pct').textContent=pct+'%';
+  g('prog-label').textContent=`${done+err} / ${total} workers complete`;
+}
+
+// ── API calls ─────────────────────────────────────────────────────────────────
+function fetchXML() {
+  fetch('/api/output?file=triedscan_result.xml', { headers: apiHeaders() })
+    .then(r => {
+      if (r.status===401) { alert('Yetkisiz — API anahtarı geçersiz'); return ''; }
+      return r.text();
+    })
+    .then(xml => {
+      if (!xml) return;
+      mergedXML = xml;
+      g('xml-out').textContent = xml;
+      parseAndRender(xml);
+    })
+    .catch(() => { g('host-list').innerHTML='<div class="empty">Sonuç dosyası yüklenemedi.</div>'; });
+}
+
+function parseAndRender(xmlStr) {
+  try {
+    const doc=new DOMParser().parseFromString(xmlStr,'text/xml');
+    const hosts=[...doc.querySelectorAll('host')];
+    let up=0,down=0,openPorts=0;
+    g('s-total').textContent=hosts.length||'—';
+    const cards=hosts.map(host=>{
+      const state=host.querySelector('status')?.getAttribute('state')||'unknown';
+      if(state==='up')up++;else down++;
+      const addr=host.querySelector('address[addrtype="ipv4"]')?.getAttribute('addr')||'Unknown';
+      const hostname=host.querySelector('hostname')?.getAttribute('name')||'';
+      const os=host.querySelector('osmatch')?.getAttribute('name')||'';
+      const ports=[...host.querySelectorAll('port')].filter(p=>p.querySelector('state')?.getAttribute('state')==='open');
+      openPorts+=ports.length;
+      const rows=ports.map(p=>{
+        const pid=p.getAttribute('portid'),prot=p.getAttribute('protocol');
+        const svc=p.querySelector('service');
+        const name=svc?.getAttribute('name')||'';
+        const prod=[svc?.getAttribute('product'),svc?.getAttribute('version')].filter(Boolean).join(' ');
+        return `<tr><td class="pnum">${escHtml(pid)}</td><td>${escHtml(prot)}</td><td class="popen">OPEN</td><td>${escHtml(name)}</td><td style="color:var(--text2)">${escHtml(prod)}</td></tr>`;
+      }).join('');
+      const hid='h-'+addr.replace(/[.:]/g,'-');
+      return `<div class="host-card">
+        <div class="host-hdr" onclick="tH('${hid}')">
+          <div class="host-ip">${escHtml(addr)}</div>
+          <div class="host-hostname">${escHtml(hostname)}</div>
+          ${os?`<div class="host-os">${escHtml(os)}</div>`:''}
+          <div class="${state==='up'?'host-up':'host-down'}">${state.toUpperCase()}</div>
+          ${ports.length?`<div style="font-size:12px;color:var(--warn);margin-left:6px">${ports.length} port${ports.length>1?'s':''}</div>`:''}
+        </div>
+        <div class="host-ports-wrap" id="${hid}">
+          ${rows?`<table class="ports-table"><tr><th>Port</th><th>Proto</th><th>State</th><th>Service</th><th>Version</th></tr>${rows}</table>`:'<div style="padding:12px 0;color:var(--text3);font-size:13px">No open ports</div>'}
+        </div></div>`;
+    });
+    g('s-up').textContent=up; g('s-down').textContent=down; g('s-ports').textContent=openPorts;
+    g('host-list').innerHTML=cards.length?cards.join(''):'<div class="empty">No hosts found.</div>';
+  } catch(e) { g('host-list').innerHTML=`<div class="empty">Parse error: ${escHtml(e.message)}</div>`; }
+}
+
+function tH(id){ g(id).classList.toggle('open'); }
+
+function switchTab(tab){
+  document.querySelectorAll('.rtab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='parsed')||(i===1&&tab==='xml')));
+  g('host-list').style.display=tab==='parsed'?'':'none';
+  g('xml-out').style.display=tab==='xml'?'block':'none';
+}
+
+function doSave(){
+  if(mergedXML){
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([mergedXML],{type:'application/xml'}));
+    a.download='triedscan_result.xml';a.click();
+  }
+  g('save-prompt').classList.remove('open');
+}
+function skipSave(){ g('save-prompt').classList.remove('open'); }
+
+async function startScan(){
+  clearErrs();
+  const target  = g('inp-target').value.trim();
+  const args    = (g('inp-args').value.trim()+' '+g('inp-extra').value.trim()).trim();
+  const wcount  = g('inp-workers').value.trim();
+
+  // Client-side validasyon
+  const te=validateTarget(target); if(te){showErr('err-target',te);return;}
+  const ae=validateArgs(args);     if(ae){showErr('err-args',ae);return;}
+  const we=validateWorkers(wcount);if(we){showErr('err-workers',we);return;}
+
+  g('host-list').innerHTML='<div class="empty">Scan running…</div>';
+  g('xml-out').textContent='';
+  ['s-total','s-up','s-down','s-ports','s-elapsed'].forEach(id=>g(id).textContent='—');
+  g('prog-fill').style.width='0%'; g('prog-pct').textContent='0%';
+  g('save-prompt').classList.remove('open');
+  mergedXML='';
+
+  try {
+    const r = await fetch('/api/start',{
+      method:'POST',
+      headers: apiHeaders({'Content-Type':'application/json'}),
+      body: JSON.stringify({
+        target,
+        nmapArgs:args,
+        workerCount: wcount ? parseInt(wcount) : 0,
+        scanTool: scanEngine
+      })
+    });
+    if(r.status===401){ alert('Yetkisiz — API anahtarı geçersiz'); return; }
+    if(r.status===409){ alert('Zaten bir tarama çalışıyor, önce durdurun.'); return; }
+    if(!r.ok){ alert('Hata: '+(await r.text())); return; }
+  } catch(e){ alert('Bağlantı hatası: '+e.message); }
+}
+
+async function stopScan(){
+  if(!confirm('Tüm worker\'ları durdur?')) return;
+  await fetch('/api/stop',{method:'POST', headers: apiHeaders()});
+}
+
+function startTimer(){ if(timerIval)clearInterval(timerIval); timerIval=setInterval(tick,1000);tick(); }
+function stopTimer() { clearInterval(timerIval);timerIval=null; }
+function tick(){ if(!startTime)return; const s=Math.floor((Date.now()-startTime)/1000); g('timer').textContent=[Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(n=>String(n).padStart(2,'0')).join(':'); }
+
+function setBadge(s){ const b=g('badge'); b.textContent={running:'SCANNING',done:'COMPLETE',idle:'IDLE',error:'ERROR'}[s]||s.toUpperCase(); b.className=s; }
+function setButtons(running){ g('btn-start').disabled=running; g('btn-abort').disabled=!running; }
+function fmtDur(secs){ const s=Math.round(secs),m=Math.floor(s/60); return m?`${m}m ${s%60}s`:`${s}s`; }
+function g(id){ return document.getElementById(id); }
+
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+  const arg=c.dataset.arg,inp=g('inp-args');
+  if(c.classList.contains('active')){
+    c.classList.remove('active');
+    inp.value=inp.value.replace(new RegExp('\\s*'+arg.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),'').trim();
+  }else{
+    c.classList.add('active');
+    inp.value=(inp.value.trim()+' '+arg).trim();
+  }
+}));
+</script>
+</body>
+</html>

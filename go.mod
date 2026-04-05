@@ -1,0 +1,3 @@
+module ghostscan
+
+go 1.26.1
