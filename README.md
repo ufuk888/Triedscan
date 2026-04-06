@@ -89,4 +89,4 @@ Workers: Otomatik hesaplama için boş bırakın veya manuel bir sayı girin.
 
 Engine: Sadece Nmap veya hibrit (RustScan + Nmap) modunu seçin.
 
-    Launch Scan: Taramayı başlatın ve alttaki kutucuklardan işçilerin durumunu canlı izleyin.
+Launch Scan: Taramayı başlatın ve alttaki kutucuklardan işçilerin durumunu canlı izleyin.
