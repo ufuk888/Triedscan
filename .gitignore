@@ -1,2 +1,14 @@
+# Binaries
+/triedscan
+triedscan.exe
+
+# OS files & Secrets
+.DS_Store
+.env
+
+# Outputs
 *.xml
-main.go.save
+*.png
+worker_*.xml
+triedscan_result.xml
+*.log

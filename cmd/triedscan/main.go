@@ -81,7 +81,7 @@ func main() {
 	cleanupTempXMLs()
 	go handleBroadcasts()
 
-	http.Handle("/", http.FileServer(http.Dir("./public")))
+	http.Handle("/", http.FileServer(http.Dir("./web")))
 	http.HandleFunc("/events", sseHandler)
 	http.HandleFunc("/api/start", authMiddleware(startScanHandler))
 	http.HandleFunc("/api/stop", authMiddleware(stopScanHandler))
