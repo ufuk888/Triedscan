@@ -61,7 +61,6 @@ Aracın çalışması için sisteminizde (tercihen Kali Linux) şu araçların k
 * Go (Golang) 1.20+
 * Nmap
 * RustScan
-
 ---
 
 ## ⚙️ Kurulum ve Çalıştırma
@@ -73,23 +72,21 @@ Aşağıdaki adımları terminalinizde sırasıyla çalıştırarak uygulamayı 
 git clone https://github.com/ufuk888/Triedscan.git
 cd Triedscan
 
-# 2. API Anahtarını ayarlayın (Zorunlu - Güvenli giriş için gereklidir)
-export TRIEDSCAN_API_KEY='sizin_gizli_anahtariniz'
-
-# 3. Gerekli Go modüllerini yükleyin
+# 2. Gerekli Go modüllerini yükleyin
 go mod tidy
 
-# 4. Uygulamayı başlatın
-go run main.go
-    
- 📖 Kullanım Kılavuzu
+# 3. Uygulamayı başlatın
+go run cmd/triedscan/main.go
+```
 
-    Target: Taramak istediğiniz IP bloğunu (örn: 192.168.1.0/24) girin.
+## 📖 Kullanım Kılavuzu
 
-    Nmap Arguments: Kullanmak istediğiniz parametreleri seçin (örn: -sV -A).
+Target: Taramak istediğiniz IP bloğunu (örn: 192.168.1.0/24) girin.
 
-    Workers: Otomatik hesaplama için boş bırakın veya manuel bir sayı girin.
+Nmap Arguments: Kullanmak istediğiniz parametreleri seçin (örn: -sV -A).
 
-    Engine: Sadece Nmap veya hibrit (RustScan + Nmap) modunu seçin.
+Workers: Otomatik hesaplama için boş bırakın veya manuel bir sayı girin.
+
+Engine: Sadece Nmap veya hibrit (RustScan + Nmap) modunu seçin.
 
     Launch Scan: Taramayı başlatın ve alttaki kutucuklardan işçilerin durumunu canlı izleyin.
